@@ -106,6 +106,10 @@ function startTestServer(
 // ── Test 2: ModeRouter — channel_factory manifest accepted ─────────────────
 
 {
+  const { Keypair } = await import('@stellar/stellar-sdk')
+  const { signManifest } = await import('../manifest/sign.js')
+  const payeeKp = Keypair.random()
+
   const validFactoryManifest = {
     routedock: '1.0',
     name: 'Factory Provider',
@@ -114,7 +118,7 @@ function startTestServer(
     network: 'testnet',
     asset: 'USDC',
     asset_contract: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
-    payee: 'GDHLJWBM6Z2Y4KF6Z4JAFIUUO2KAXAJ6MAIUK2XMGBQ7ZUUZ7HFPW2BK',
+    payee: payeeKp.publicKey(),
     pricing: {
       'mpp-session': {
         rate: '0.0001',
@@ -128,10 +132,15 @@ function startTestServer(
     tags: ['stream', 'stellar'],
   }
 
+  const signedFactoryManifest = signManifest(
+    validFactoryManifest as import('../types.js').RouteDockManifest,
+    payeeKp.secret(),
+  )
+
   const server = await startTestServer((req, res) => {
     if (req.url === '/.well-known/routedock.json') {
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify(validFactoryManifest))
+      res.end(JSON.stringify(signedFactoryManifest))
     } else {
       res.writeHead(404)
       res.end()
@@ -143,7 +152,7 @@ function startTestServer(
     const manifest = await fetchManifest(server.url)
     assert.equal(
       manifest.pricing['mpp-session']?.channel_factory,
-      validFactoryManifest.pricing['mpp-session'].channel_factory,
+      signedFactoryManifest.pricing['mpp-session'].channel_factory,
       'manifest should preserve channel_factory in mpp-session pricing',
     )
     console.log('✓ Test 2: channel_factory manifest acceptance PASSED')
