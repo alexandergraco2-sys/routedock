@@ -172,7 +172,7 @@ export function selectMode(
   }
 
   if (options.optimize === 'cost') {
-    const candidates = ['x402', 'mpp-charge']
+    const candidates = (['x402', 'mpp-charge'] as Array<'x402' | 'mpp-charge'>)
       .filter((mode) => modes.includes(mode))
       .map((mode) => {
         const pricing = manifest.pricing[mode]
